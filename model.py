@@ -132,34 +132,35 @@ class GPT_Model(nn.Module):
     @torch.inference_mode()
     def beam_search(self, starting_seq: torch.tensor, n_generate: int, beam_width: int):
         self.eval()
-        starting_seq = starting_seq.to(device)
-        sequences = [(starting_seq, 0)]
+        B = starting_seq.size(0)
+        sequences = [(starting_seq, torch.zeros(B, 1, device=device))]
 
         for _ in range(n_generate):
             all_candidates = []
             for seq, score in sequences:
                 tok_emb = self.token_embedding_table(seq)  # (B, T, C)
-                pos_emb = self.position_embedding_table(torch.arange(seq.size(1), device=device))  # (T, C)
+                pos_emb = self.position_embedding_table(torch.arange(seq.size(1), device= device))  # (T, C)
                 x = tok_emb + pos_emb 
-
+                
                 for block in self.blocks:
                     x = block(x)
-
+                
                 x = self.ln_f(x)
                 logits = self.lm_head(x)
-
-                # Получаем вероятности след токена для seq
+                
                 log_probs = F.softmax(logits[:, -1, :], dim=-1)
                 top_log_probs, top_indices = torch.topk(log_probs, beam_width, dim=-1)
-
+                
                 for i in range(beam_width):
-                    candidate = (torch.cat([seq, top_indices[:, i].unsqueeze(-1)], dim=-1), score + top_log_probs[:, i].item())
-                    all_candidates.append(candidate)
-
-            ordered = sorted(all_candidates, key=lambda tup: tup[1], reverse=True)
+                    candidate_seq = torch.cat([seq, top_indices[:, i].unsqueeze(-1)], dim=-1)
+                    candidate_score = score + top_log_probs[:, i].unsqueeze(-1)
+                    all_candidates.append((candidate_seq, candidate_score))
+            
+            ordered = sorted(all_candidates, key=lambda tup: tup[1].max().item(), reverse=True)
             sequences = ordered[:beam_width]
 
-        return sequences[0][0]
+        best_seq = sequences[0][0]
+        return best_seq
     
     @torch.inference_mode()
     def beam_generate(self, starting_seq: torch.tensor, n_generate: int, beam_width: int = 3):

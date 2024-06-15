@@ -29,6 +29,16 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
+from tokenizer import tokenizer
+
+
+seq_max_len = 300
+block_size = seq_max_len
+n_embd = 512
+vocab_size = tokenizer.vocab_size
+n_layer = 6
+n_head = 8
+device = ("cuda" if torch.cuda.is_available() else "cpu")
 
 class Head_Masked(nn.Module):
     """One head of self-attention with masking."""
