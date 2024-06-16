@@ -33,7 +33,7 @@ from model import model
 from tokenizer import tokenizer
 
 bs = 2
-starting_tensor = torch.tensor([101,10400,14102]).repeat(bs,1)
+starting_tensor = torch.tensor([101]).repeat(bs,1)
 
 for text in model.beam_generate(starting_tensor,5):
     print(tokenizer.decode(text.tolist()))
